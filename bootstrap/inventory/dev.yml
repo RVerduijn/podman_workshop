@@ -1,6 +1,13 @@
 ---
 all:
   hosts:
-    stepstone:
+    stepstone.qstars.lab:
+    utility.qstars.lab:
   children:
+    ipaserver:
+      hosts:
+        utility.qstars.lab:
+    ipaclients:
+      hosts:
+        stepstone.qstars.lab:
   vars:

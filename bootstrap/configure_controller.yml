@@ -1,0 +1,18 @@
+---
+- name: clone ansible collection
+  hosts: localhost
+  gather_facts: false
+  become: false
+
+  tasks:
+    #  due to a bug in ansible 2.9 we cannot use the ansible-freeipa collection
+    #  this will no longer be needed when the ansible-core rpms are finally released
+    - name: clone ansible freeipa collection
+      git:
+        repo: https://github.com/freeipa/ansible-freeipa.git
+        dest: ../ansible-freeipa
+        version: master
+
+    - name: install collections
+      command: ansible-galaxy collection install -r collections/requirements.yml -f
+      when: true

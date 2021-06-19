@@ -1,0 +1,20 @@
+---
+- name: clean lab
+  hosts: localhost
+  remote_user: root
+  gather_facts: false
+  vars:
+    known_hosts_lines:
+      - '10.'
+      - workstation
+      - utility
+      - ipaserver
+      - stepstone
+
+  tasks:
+    - name: clean known hosts
+      lineinfile:
+        path: ~/.ssh/known_hosts
+        state: absent
+        regexp: "^{{ item }}.*"
+      loop: "{{ known_hosts_lines }}"

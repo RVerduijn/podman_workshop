@@ -1,0 +1,14 @@
+---
+network_connections:
+  - name: eth0
+    state: up
+    type: ethernet
+    interface_name: eth0
+    ip:
+      address:
+        - 10.10.1.10/24
+      dns:
+        - 127.0.0.1
+      dns_search:
+        - qstars.lab
+      gateway4: 10.10.1.1

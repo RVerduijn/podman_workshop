@@ -1,0 +1,54 @@
+---
+- name: configure ipaserver
+  hosts: utility.qstars.lab
+  gather_facts: true
+  become: true
+
+  tasks:
+    - name: remove cloud init
+      package:
+        name: cloud-init
+        state: absent
+
+    - name: clean up cloud_init
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /var/log/cloud-init*
+        - /var/lib/cloud
+        - /etc/cloud
+        - /home/cloud-user
+
+    - name: update server
+      package:
+        name: "*"
+        state: latest
+      tags:
+        - skip_ansible_lint
+
+    - name: check for reboot
+      command: needs-restarting -r
+      register: reboot_required
+      changed_when: false
+      failed_when: reboot_required['rc'] > 1
+
+    - name: reboot
+      reboot:
+      when: reboot_required['rc'] == 1
+
+    - name: set hostname
+      command: hostnamectl set-hostname {{ inventory_hostname }}
+      when: true
+
+    - name: install packages
+      package:
+        name: "{{ packages }}"
+
+    - name: timesync
+      include_role:
+        name: fedora.linux_system_roles.timesync
+
+    - name: include network
+      include_role:
+        name: fedora.linux_system_roles.network

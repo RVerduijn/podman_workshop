@@ -1,0 +1,17 @@
+---
+ansible_user: stepstone
+packages:
+  - dnf-utils
+network_connections:
+  - name: eth0
+    state: up
+    type: ethernet
+    interface_name: eth0
+    ip:
+      address:
+        - 10.10.200.10/24
+      dns:
+        - 10.10.1.10
+      dns_search:
+        - qstars.lab
+      gateway4: 10.10.200.1

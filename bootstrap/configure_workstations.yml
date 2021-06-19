@@ -1,0 +1,98 @@
+---
+- name: add worstations to the inventory
+  hosts: localhost
+  gather_facts: false
+  become: false
+  vars_files:
+    - vars/students.yml
+
+  tasks:
+    - name: add workstations to inventory
+      add_host:
+        hostname: workstation{{ item }}.qstars.lab
+        ansible_host: 10.10.1.{{ item }}
+        ansible_user: qstars
+        ansible_ssh_common_args: >-
+          -o IdentityFile=~/.ssh/id_rsa_qstars_aws
+          -o StrictHostKeyChecking=no
+          -o UserKnownHostsFile=/dev/null
+          -o ProxyCommand="ssh -W %h:%p -q stepstone@13.36.221.45"'
+        groups:
+          - all
+          - ipaclients
+        network_connections:
+          - name: eth0
+            state: up
+            type: ethernet
+            interface_name: eth0
+            ip:
+              address:
+                - 10.10.1.{{ item }}/24
+              dns:
+                - 127.0.0.1
+              dns_search:
+                - qstars.lab
+              gateway4: 10.10.1.1
+      with_sequence: start=11 end={{ 10 + students | length }}
+
+- name: configure ipaclients
+  hosts: ipaclients
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: remove cloud init
+      package:
+        name: cloud-init
+        state: absent
+
+    - name: clean up cloud_init
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /var/log/cloud-init*
+        - /var/lib/cloud
+        - /etc/cloud
+        - /home/cloud-user
+
+    - name: update server
+      package:
+        name: "*"
+        state: latest
+      tags:
+        - skip_ansible_lint
+
+    - name: check for reboot
+      command: needs-restarting -r
+      register: reboot_required
+      changed_when: false
+      failed_when: reboot_required['rc'] > 1
+
+    - name: reboot
+      reboot:
+      when: reboot_required['rc'] == 1
+
+    - name: set hostname
+      command: hostnamectl set-hostname {{ inventory_hostname }}
+      when: true
+
+    - name: gather facts
+      setup:
+
+    - name: timesync
+      include_role:
+        name: fedora.linux_system_roles.timesync
+
+    - name: include network
+      include_role:
+        name: fedora.linux_system_roles.network
+
+    - name: install packages
+      package:
+        name: "{{ packages }}"
+
+    - name: setip ipaclient
+      include_role:
+        name: ipaclient
+
