@@ -1,0 +1,26 @@
+---
+- name: configure students
+  hosts: "{{ groups['ipaserver'][0] }}"
+  gather_facts: false
+  become: false
+  vars_files:
+    - vars/students.yml
+
+  tasks:
+    - name: include gen_user.yml
+      include_tasks: gen_user.yml
+      loop: "{{ students }}"
+      loop_control:
+        loop_var: student
+
+    - name: generate user list for ipauser
+      set_fact:
+        users: >-
+          {{ users | default([]) +
+          [
+          'name': user['name'],
+          'first': user['first'],
+          'last': user['last'],
+          'email': user['email']
+          ]
+          }}

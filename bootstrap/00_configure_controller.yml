@@ -16,3 +16,11 @@
     - name: install collections
       command: ansible-galaxy collection install -r collections/requirements.yml -f
       when: true
+
+    - name: install pip packages
+      pip:
+        name: "{{ item }}"
+        extra_args: --user --upgrade
+      loop:
+        - ansible-lint
+        - yamllint

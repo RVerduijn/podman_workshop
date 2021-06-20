@@ -1,0 +1,13 @@
+---
+- name: current student
+  debug:
+    var: student
+
+- name: generate ssh key pair
+  openssh_keypair:
+    path: /tmp/id_rsa_podman_workshop_{{ student['name'] }}
+  register: gen_key
+
+- name: debug
+  debug:
+    var: gen_key

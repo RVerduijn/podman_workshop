@@ -2,7 +2,13 @@
 all:
   hosts:
     stepstone.qstars.lab:
+      ansible_host: 13.36.41.161
+      ansible_ssh_common_args: >-
+        -o IdentityFile=~/.ssh/id_rsa_qstars_aws
+        -o StrictHostKeyChecking=no
+        -o UserKnownHostsFile=/dev/null
     utility.qstars.lab:
+      ansible_host: 10.10.1.10
   children:
     ipaserver:
       hosts:
@@ -11,3 +17,8 @@ all:
       hosts:
         stepstone.qstars.lab:
   vars:
+    ansible_ssh_common_args: >-
+      -o IdentityFile=~/.ssh/id_rsa_qstars_aws
+      -o StrictHostKeyChecking=no
+      -o UserKnownHostsFile=/dev/null
+      -o ProxyCommand="ssh -W %h:%p -q stepstone@stepstone.qstars.lab"

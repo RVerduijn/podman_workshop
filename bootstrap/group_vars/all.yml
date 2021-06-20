@@ -12,8 +12,10 @@ timesync_ntp_servers:
   - hostname: 3.centos.pool.ntp.org
     iburst: true
 
-packages:
+default_packages:
   - bash-completion
+  - bind-utils
+  - dnf-utils
   - mlocate
   - vim
 

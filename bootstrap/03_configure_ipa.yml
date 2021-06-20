@@ -1,0 +1,137 @@
+---
+- name: configure ipaserver
+  hosts: utility.qstars.lab
+  gather_facts: true
+  become: true
+
+  tasks:
+    - name: configure qstars lab dns
+      ipadnszone:
+        ipaadmin_principal: admin
+        ipaadmin_password: "{{ ipaadmin_password }}"
+        name: qstars.lab
+        allow_sync_ptr: true
+        dynamic_update: true
+
+    - name: Ensure 10.10.10.0/24 zone for reverse DNS lookup is present.
+      ipadnszone:
+        ipaadmin_principal: admin
+        ipaadmin_password: "{{ ipaadmin_password }}"
+        name_from_ip: 10.10.1.0/24
+        dynamic_update: true
+        state: present
+
+    - name: Ensure 10.10.200.0/24 zone for reverse DNS lookup is present.
+      ipadnszone:
+        ipaadmin_principal: admin
+        ipaadmin_password: "{{ ipaadmin_password }}"
+        name_from_ip: 10.10.200.0/24
+        dynamic_update: true
+        state: present
+
+    - name: create admins sudorule
+      ipasudorule:
+        ipaadmin_principal: admin
+        ipaadmin_password: "{{ ipaadmin_password }}"
+        name: allow_sudo_all
+        description: allow members of admins sudo all
+        hostcategory: all
+        runasusercategory: all
+        runasgroupcategory: all
+        cmdcategory: all
+        group: admins
+
+    - name: create student group
+      ipagroup:
+        ipaadmin_principal: admin
+        ipaadmin_password: "{{ ipaadmin_password }}"
+        name: students
+
+    - name: create student sudorule
+      ipasudorule:
+        ipaadmin_principal: admin
+        ipaadmin_password: "{{ ipaadmin_password }}"
+        name: allow_sudo_all_nopasswd
+        description: allow students sudo without password
+        hostcategory: all
+        runasusercategory: all
+        runasgroupcategory: all
+        cmdcategory: all
+        group: students
+        sudooption: '!authenticate'
+
+    - name: create ipa hostgroups
+      ipahostgroup:
+        ipaadmin_principal: admin
+        ipaadmin_password: "{{ ipaadmin_password }}"
+        name: "{{ item }}"
+      loop:
+        - workstations
+        - stepstone
+
+    - name: create stepstone hbacrule
+      ipahbacrule:
+        ipaadmin_principal: admin
+        ipaadmin_password: "{{ ipaadmin_password }}"
+        name: stepstone ssh access
+        hbacsvc:
+          - sshd
+        hostgroup:
+          - stepstone
+
+    - name: create workstations automember hostgroup rule
+      ipaautomember:
+        ipaadmin_principal: admin
+        ipaadmin_password: "{{ ipaadmin_password }}"
+        name: workstations
+        description: workstations
+        automember_type: hostgroup
+        inclusive:
+          - key: fqdn
+            expression: "workstation.*.qstars.lab"
+
+    - name: create stepstone automember hostgroup rule
+      ipaautomember:
+        ipaadmin_principal: admin
+        ipaadmin_password: "{{ ipaadmin_password }}"
+        name: stepstone
+        description: stepstone
+        automember_type: hostgroup
+        inclusive:
+          - key: fqdn
+            expression: "stepstone.qstars.lab"
+
+    - name: create admin hbacrule
+      ipahbacrule:
+        ipaadmin_principal: admin
+        ipaadmin_password: "{{ ipaadmin_password }}"
+        name: admin access all
+        group:
+          - admins
+        hostcategory: all
+        servicecategory: all
+
+    - name: disable allow_all
+      ipahbacrule:
+        ipaadmin_principal: admin
+        ipaadmin_password: "{{ ipaadmin_password }}"
+        name: allow_all
+        state: disabled
+
+    - name: create student hbacservice group
+      ipahbacsvcgroup:
+        ipaadmin_principal: admin
+        ipaadmin_password: "{{ ipaadmin_password }}"
+        description: svcgroup to allow students sshd and sudo
+        name: student services
+        hbacsvc:
+          - sshd
+          - sudo
+          - sudo-i
+
+    - name: create student hbacrule
+      ipahbacrule:
+        ipaadmin_principal: admin
+        ipaadmin_password: "{{ ipaadmin_password }}"
+        name: workstations services access
+        state: absent

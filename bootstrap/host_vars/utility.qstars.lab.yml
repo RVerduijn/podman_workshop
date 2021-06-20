@@ -12,3 +12,7 @@ network_connections:
       dns_search:
         - qstars.lab
       gateway4: 10.10.1.1
+  - name: ens3
+    state: absent
+  - name: System eth0
+    state: absent

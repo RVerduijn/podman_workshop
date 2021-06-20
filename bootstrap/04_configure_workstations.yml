@@ -1,0 +1,187 @@
+---
+- name: add worstations to the inventory
+  hosts: localhost
+  gather_facts: false
+  become: false
+  vars:
+    workstations: 2
+
+  tasks:
+    - name: add workstations to inventory
+      add_host:
+        hostname: workstation{{ item }}.qstars.lab
+        ansible_host: 10.10.1.{{ item }}
+        ansible_user: student
+        groups:
+          - all
+          - ipaclients
+          - workstations
+        network_connections:
+          - name: eth0
+            state: up
+            type: ethernet
+            interface_name: eth0
+            ip:
+              address:
+                - 10.10.1.{{ item }}/24
+              dns:
+                - 10.10.1.10
+              dns_search:
+                - qstars.lab
+              gateway4: 10.10.1.1
+          - name: ens3
+            state: absent
+          - name: System eth0
+            state: absent
+      with_sequence: start=11 end={{ 10 + workstations }}
+
+- name: configure ipaclients
+  hosts: ipaclients
+  gather_facts: true
+  become: true
+
+  tasks:
+    - name: check if /usr/bin/python exists
+      stat:
+        path: /usr/bin/python
+      register: python_compat
+
+    - name: set python interpreter
+      set_fact:
+        ansible_python_interpreter: /usr/bin/python3
+      when: python_compat['stat']['exists'] | bool
+
+    - name: remove unwanted packages
+      package:
+        name:
+          - cloud-init
+          - python-unversioned-command
+        state: absent
+
+    - name: reset ssh connection
+      meta: reset_connection
+
+    - name: clean up cloud_init
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /var/log/cloud-init*
+        - /var/lib/cloud
+        - /etc/cloud
+        - /home/cloud-user
+
+    - name: set hostname
+      command: hostnamectl set-hostname {{ inventory_hostname }}
+      when: true
+
+    - name: gather facts
+      setup:
+
+    - name: timesync
+      include_role:
+        name: fedora.linux_system_roles.timesync
+
+    - name: include network
+      include_role:
+        name: fedora.linux_system_roles.network
+
+    - block:
+        - name: add client_packages to default packages
+          set_fact:
+            default_packages: "{{ default_packages + client_packages }}"
+
+        - name: add epel
+          package:
+            name: epel-release
+          when: ansible_distribution == "CentOS"
+
+      when: inventory_hostname in groups['workstations']
+
+    - name: install packages
+      package:
+        name: "{{ default_packages }}"
+        state: present
+
+    - name: update server
+      package:
+        name: "*"
+        state: latest
+      tags:
+        - skip_ansible_lint
+
+    - name: check for reboot
+      command: needs-restarting -r
+      register: reboot_required
+      changed_when: false
+      failed_when: reboot_required['rc'] > 1
+
+    - name: reboot
+      reboot:
+      when: reboot_required['rc'] == 1
+
+    - name: setip ipaclient
+      include_role:
+        name: ipaclient
+
+- name: configure workstations
+  hosts: workstations
+  gather_facts: true
+  become: true
+
+  tasks:
+    - name: create ext4 partition on second hd
+      community.general.parted:
+        device: /dev/nvme1n1
+        number: 1
+        state: present
+        fs_type: ext4
+
+    - name: Create a ext4 filesystem
+      filesystem:
+        fstype: ext4
+        dev: /dev/nvme1n1p1
+
+    - name: read authorized_keys
+      slurp:
+        path: /home/student/.ssh/authorized_keys
+      register: authorized_keys
+
+    - name: Mount device
+      ansible.posix.mount:
+        path: /home
+        src: /dev/nvme1n1p1
+        fstype: ext4
+        state: mounted
+        opts: noatime,acl
+      ignore_errors: true
+
+- name: due to unreachable homedir continue as admin
+  hosts: workstations
+  gather_facts: false
+  become: true
+  vars:
+    ansible_user: admin
+    ansible_password: "{{ ipaadmin_password }}"
+    ansible_become_password: "{{ ipaadmin_password }}"
+
+  tasks:
+    - name: restore context on homefolder
+      command: restorecon -rv /home
+      when: true
+
+    - name: ensure directories exist
+      file:
+        path: /home/student/.ssh
+        state: directory
+        mode: 0700
+        owner: student
+        group: student
+
+    - name: create authorized_keys
+      copy:
+        dest: /home/student/.ssh/authorized_keys
+        mode: 0400
+        owner: student
+        group: student
+        content: "{{ authorized_keys['content'] | b64decode }}"

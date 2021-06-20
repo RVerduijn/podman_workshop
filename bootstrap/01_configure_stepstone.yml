@@ -1,0 +1,54 @@
+---
+- name: configure stepstone
+  hosts: stepstone.qstars.lab
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: disable rpcbind
+      systemd:
+        name: rpcbind
+        state: stopped
+        enabled: false
+
+    - name: update server
+      package:
+        name: "*"
+        state: latest
+      tags:
+        - skip_ansible_lint
+
+    - name: check for reboot
+      command: needs-restarting -r
+      register: reboot_required
+      changed_when: false
+      failed_when: reboot_required['rc'] > 1
+
+    - name: reboot
+      reboot:
+      when: reboot_required['rc'] == 1
+
+    - block:
+        - name: read ssh private key
+          slurp:
+            src: ~/.ssh/id_rsa_qstars_aws
+          register: ssh_key
+          delegate_to: localhost
+
+        - name: write ssh key to stepstone
+          copy:
+            dest: ~/.ssh/id_rsa
+            mode: 0400
+            owner: stepstone
+            group: stepstone
+            content: "{{ ssh_key['content'] | b64decode }}"
+
+        - name: extract pubkey
+          openssl_publickey:
+            path: ~/.ssh/id_rsa.pub
+            privatekey_path: ~/.ssh/id_rsa
+            format: OpenSSH
+            mode: 0644
+            owner: stepstone
+            group: stepstone
+      become: false

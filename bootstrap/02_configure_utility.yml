@@ -20,6 +20,12 @@
         - /etc/cloud
         - /home/cloud-user
 
+    - name: disable rpcbind
+      systemd:
+        name: rpcbind
+        state: stopped
+        enabled: false
+
     - name: update server
       package:
         name: "*"
@@ -41,10 +47,6 @@
       command: hostnamectl set-hostname {{ inventory_hostname }}
       when: true
 
-    - name: install packages
-      package:
-        name: "{{ packages }}"
-
     - name: timesync
       include_role:
         name: fedora.linux_system_roles.timesync
@@ -52,3 +54,23 @@
     - name: include network
       include_role:
         name: fedora.linux_system_roles.network
+
+    - name: install packages
+      package:
+        name: "{{ default_packages }}"
+
+    - name: allow queries from stepstone
+      lineinfile:
+        path: /etc/named/ipa-options-ext.conf
+        regexp: '^{{ item }}'
+        line: "{{ item }}"
+      notify: restart named-pkcs11
+      loop:
+        - allow-recursion { any; };
+        - allow-query-cache { any; };
+
+  handlers:
+    - name: restart named-pkcs11
+      systemd:
+        state: restarted
+        name: named-pkcs11
