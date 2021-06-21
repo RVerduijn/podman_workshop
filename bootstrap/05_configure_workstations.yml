@@ -1,39 +1,8 @@
 ---
-- name: add workstations to the inventory
-  hosts: localhost
+- name: read all hostvars
+  hosts: all
   gather_facts: false
   become: false
-  vars:
-    workstations: 2
-
-  tasks:
-    - name: add workstations to inventory
-      add_host:
-        hostname: workstation{{ item }}.qstars.lab
-        ansible_host: 10.10.1.{{ item }}
-        ansible_user: student
-        groups:
-          - all
-          - ipaclients
-          - workstations
-        network_connections:
-          - name: eth0
-            state: up
-            type: ethernet
-            interface_name: eth0
-            ip:
-              address:
-                - 10.10.1.{{ item }}/24
-              dns:
-                - 10.10.1.10
-              dns_search:
-                - qstars.lab
-              gateway4: 10.10.1.1
-          - name: ens3
-            state: absent
-          - name: System eth0
-            state: absent
-      with_sequence: start=11 end={{ 10 + workstations }}
 
 - name: configure workstations
   hosts: workstations

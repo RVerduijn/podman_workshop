@@ -48,19 +48,6 @@
         ipaadmin_password: "{{ ipaadmin_password }}"
         name: students
 
-    - name: create student sudorule
-      ipasudorule:
-        ipaadmin_principal: admin
-        ipaadmin_password: "{{ ipaadmin_password }}"
-        name: allow_sudo_all_nopasswd
-        description: allow students sudo without password
-        hostcategory: all
-        runasusercategory: all
-        runasgroupcategory: all
-        cmdcategory: all
-        group: students
-        sudooption: '!authenticate'
-
     - name: create ipa hostgroups
       ipahostgroup:
         ipaadmin_principal: admin
@@ -75,6 +62,7 @@
         ipaadmin_principal: admin
         ipaadmin_password: "{{ ipaadmin_password }}"
         name: stepstone ssh access
+        usercategory: all
         hbacsvc:
           - sshd
         hostgroup:
@@ -129,10 +117,3 @@
           - sshd
           - sudo
           - sudo-i
-
-    - name: create student hbacrule
-      ipahbacrule:
-        ipaadmin_principal: admin
-        ipaadmin_password: "{{ ipaadmin_password }}"
-        name: workstations services access
-        state: absent
