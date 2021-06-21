@@ -1,0 +1,71 @@
+---
+- name: add workstations to the inventory
+  hosts: localhost
+  gather_facts: false
+  become: false
+  vars:
+    workstations: 2
+
+  tasks:
+    - name: add workstations to inventory
+      add_host:
+        hostname: workstation{{ item }}.qstars.lab
+        ansible_host: 10.10.1.{{ item }}
+        ansible_user: student
+        groups:
+          - all
+          - ipaclients
+          - workstations
+        network_connections:
+          - name: eth0
+            state: up
+            type: ethernet
+            interface_name: eth0
+            ip:
+              address:
+                - 10.10.1.{{ item }}/24
+              dns:
+                - 10.10.1.10
+              dns_search:
+                - qstars.lab
+              gateway4: 10.10.1.1
+          - name: ens3
+            state: absent
+          - name: System eth0
+            state: absent
+      with_sequence: start=11 end={{ 10 + workstations }}
+
+- name: mail students
+  hosts: localhost
+  gather_facts: false
+  become: false
+  vars_files:
+    - vars/students.yml
+    - vars/mail.yml
+  tasks:
+    - name: set mail list
+      set_fact:
+        mail: none
+      when: mail is not defined
+
+    - name: mail student
+      mail:
+        host: "{{ smtp_server }}"
+        port: "{{ smtp_port }}"
+        username: "{{ email_login }}"
+        password: "{{ email_password }}"
+        to: "{{ student['first'] }} {{ student['last'] }} <{{ student['email'] }}>"
+        subject: qstars podman workshop
+        body: "{{ lookup('template','mail_body.j2') }}"
+        attach:
+          - userconfig/{{ student['name'] }}/id_rsa_qstars_aws_{{ student['name'] }}
+          - userconfig/{{ student['name'] }}/id_rsa_qstars_aws_{{ student['name'] }}.pub
+          - userconfig/{{ student['name'] }}/config
+
+      loop: "{{ students }}"
+      loop_control:
+        loop_var: student
+      when: >-
+        ( student['name'] in mail )
+        or
+        ( 'all' in mail )

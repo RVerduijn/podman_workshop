@@ -1,0 +1,58 @@
+#
+# plaats dit bestand in je .ssh directory
+# /home/{{ new_student['name'] }}/.ssh/config
+#
+# zorg ervoor dat de directory en de bestanden de volgende rechten hebben
+# ls -al /home/{{ new_student['name'] }}/.ssh
+# drwx------. 1 {{ new_student['name'] }} {{ new_student['name'] }}   994 Jun 21 12:57 .
+# drwx------. 1 {{ new_student['name'] }} {{ new_student['name'] }}  7112 Jun 21 13:08 ..
+# -rw-------. 1 {{ new_student['name'] }} {{ new_student['name'] }}  2352 Jun 20 19:12 config
+# -rw-------. 1 {{ new_student['name'] }} {{ new_student['name'] }}  3357 Jun 21 11:57 id_rsa_qstars_aws_{{ new_student['name'] }}
+# -rw-r--r--. 1 {{ new_student['name'] }} {{ new_student['name'] }}   724 Jun 21 11:57 id_rsa_qstars_aws_{{ new_student['name'] }}.pub
+#
+# hierna kun je inloggen op je workstation vanaf je linux systeem met het commando
+# ssh {{ new_student['workstation'].split('.')[0] }}
+#
+
+Host stepstone stepstone.qstars.lab
+  HostName {{ hostvars['stepstone.qstars.lab']['ansible_host'] }}
+  IdentityFile /home/{{ new_student['name'] }}/.ssh/id_rsa_qstars_aws_{{ new_student['name'] }}
+  User {{ new_student['name'] }}
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
+
+Host {{ new_student['workstation'].split('.')[0] }} {{ new_student['workstation'] }}
+  Hostname {{ hostvars[new_student['workstation']]['ansible_host'] }}
+  User {{ new_student['name'] }}
+  ProxyJump stepstone
+  IdentityFile /home/{{ new_student['name'] }}/.ssh/id_rsa_qstars_aws_{{ new_student['name'] }}
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
+
+{#
+{{ lookup('pipe','date +%Y-%m-%d-%H-%M-%S') }}
+{{ lookup('pipe','date +%b %m %H:%M') }}
+
+  ok: [localhost] => {
+    "ansible_date_time": {
+        "date": "2017-09-30",
+        "day": "30",
+        "epoch": "1506803206",
+        "hour": "13",
+        "iso8601": "2017-09-30T20:26:46Z",
+        "iso8601_basic": "20170930T132646356294",
+        "iso8601_basic_short": "20170930T132646",
+        "iso8601_micro": "2017-09-30T20:26:46.356428Z",
+        "minute": "26",
+        "month": "09",
+        "second": "46",
+        "time": "13:26:46",
+        "tz": "PDT",
+        "tz_offset": "-0700",
+        "weekday": "Saturday",
+        "weekday_number": "6",
+        "weeknumber": "39",
+        "year": "2017"
+    }
+}
+#}

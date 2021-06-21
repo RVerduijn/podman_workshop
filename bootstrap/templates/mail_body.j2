@@ -1,0 +1,32 @@
+Hallo {{ student['first'] }},
+
+Dit zijn de credentials voor de podman workshop testomgeving.
+Er is een vm voor je aangemaakt op aws.
+Deze vm is lid van het ipadomain qstars.lab
+
+Je login gegevens voor de lab omgeving.
+login: {{ student['name'] }}
+password: {{ student['password'] }}
+
+De gegevens voor je vm:
+fqdn: {{ student['workstation'] }}
+ip: {{ hostvars[student['workstation']]['ansible_host'] }}
+
+Je werkstation is bereikbaar over ssh via een jumphost.
+We hebben geen internet domain geregistreerd voor deze workshop.
+Gebruik daarom het ip van de jumphost om in te loggen op de lab omgeving.
+
+Gegevens jumphost:
+ip: {{ hostvars['stepstone.qstars.lab']['ansible_host'] }}
+fqdn: stepstone.qstars.lab
+
+Je login is geconfigureerd voor je vm en de jumphost.
+
+Om het inloggen te versimpelen is er voor jou ook een ssh-keypair toegevoegd aan deze mail.
+Je vm en de jumphost zijn hier al op voorbereid, dus je kan er meteen mee inloggen.
+Ook is een voorbeeld ssh config bijgevoegd.
+
+Groet
+Rob Verduijn
+T: +31-6-23820143
+M: rob.verduijn@qstars.nl

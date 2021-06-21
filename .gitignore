@@ -1,2 +1,5 @@
 ansible-freeipa
 bootstrap/vars/students.yml
+bootstrap/userconfig
+bootstrap/vars/mail.yml
+bootstrap/vars/students_full.yml

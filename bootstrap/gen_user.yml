@@ -3,11 +3,91 @@
   debug:
     var: student
 
-- name: generate ssh key pair
-  openssh_keypair:
-    path: /tmp/id_rsa_podman_workshop_{{ student['name'] }}
-  register: gen_key
+- name: set temp new_student
+  set_fact:
+    new_student: "{{ student }}"
 
-- name: debug
+- block:
+    - name: generate ssh key pair
+      openssh_keypair:
+        path: /tmp/id_rsa_podman_workshop_{{ new_student['name'] }}
+      register: ssh_pub_key
+
+    - name: read priv_key
+      slurp:
+        path: /tmp/id_rsa_podman_workshop_{{ new_student['name'] }}
+      register: ssh_key
+
+    - name: remove key file
+      file:
+        path: /tmp/id_rsa_podman_workshop_{{ new_student['name'] }}
+        state: absent
+
+    - name: set student sshkey
+      set_fact:
+        new_student: "{{ new_student | combine({'sshkey': ssh_key['content'], 'sshpubkey': ssh_pub_key['public_key']}) }}"
+    
+  when: >-
+    new_student['sshpubkey'] is not defined
+    or
+    new_student['sshkey'] is not defined
+
+- name: set student password
+  set_fact:
+    new_student: >-
+      {{ new_student | combine({ 'password': 
+      lookup('password', '/dev/null chars=ascii_letters,digits length=32')
+      }) }}
+  when:
+    - new_student['password'] is not defined
+
+- name: set student groups
+  set_fact:
+    new_student: "{{ new_student | combine({ 'groups': ['students'] }) }}"
+  when:
+    - new_student['groups'] is not defined
+
+- name: debugstudent
   debug:
-    var: gen_key
+    var: new_student['name']
+
+- name: add new_student to new_students
+  set_fact:
+    new_students: "{{ new_students | default([]) + [ new_student ] }}"
+
+- name: add user to users list
+  set_fact:
+    users: >-
+      {{ users | default([]) +
+      [{
+      'name': new_student['name'],
+      'first': new_student['first'],
+      'last': new_student['last'],
+      'email': new_student['email'],
+      'sshpubkey': new_student['sshpubkey'],
+      'password': new_student['password']
+      }] }}
+
+- block:
+    - name: create student data dir
+      file:
+        path: userconfig/{{ new_student['name'] }}/
+        state: directory
+        mode: 0700
+        recurse: true
+        owner: "{{ lookup('env','USER') }}"
+        group: "{{ lookup('env','USER') }}"
+
+    - name: create ssh files
+      copy:
+        dest: userconfig/{{ new_student['name'] }}/{{ item['dest'] }}
+        content: "{{ item['content'] }}"
+      loop:
+        - dest: id_rsa_qstars_aws_{{ new_student['name'] }}
+          content: "{{ new_student['sshkey'] | b64decode }}"
+        - dest: id_rsa_qstars_aws_{{ new_student['name'] }}.pub
+          content: "{{ new_student['sshpubkey'] }}"
+        - dest: config
+          content: "{{ lookup('template', 'ssh_config.j2') }}"
+
+  delegate_to: localhost

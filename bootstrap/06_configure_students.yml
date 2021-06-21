@@ -1,0 +1,88 @@
+---
+- name: add workstations to the inventory
+  hosts: localhost
+  gather_facts: false
+  become: false
+  vars:
+    workstations: 2
+
+  tasks:
+    - name: add workstations to inventory
+      add_host:
+        hostname: workstation{{ item }}.qstars.lab
+        ansible_host: 10.10.1.{{ item }}
+        ansible_user: student
+        groups:
+          - all
+          - ipaclients
+          - workstations
+        network_connections:
+          - name: eth0
+            state: up
+            type: ethernet
+            interface_name: eth0
+            ip:
+              address:
+                - 10.10.1.{{ item }}/24
+              dns:
+                - 10.10.1.10
+              dns_search:
+                - qstars.lab
+              gateway4: 10.10.1.1
+          - name: ens3
+            state: absent
+          - name: System eth0
+            state: absent
+      with_sequence: start=11 end={{ 10 + workstations }}
+
+- name: configure students
+  hosts: "{{ groups['ipaserver'][0] }}"
+  gather_facts: false
+  become: false
+  vars_files:
+    - vars/students.yml
+    - vars/mail.yml
+    
+  tasks:
+    - name: include gen_user.yml
+      include_tasks: gen_user.yml
+      loop: "{{ students }}"
+      loop_control:
+        loop_var: student
+
+    - name: write new user file
+      template:
+        dest: vars/students.yml
+        src: students.yml.j2
+        mode: 0600
+      delegate_to: localhost
+
+    - name: create ipa users
+      ipauser:
+        ipaadmin_principal: admin
+        ipaadmin_password: "{{ ipaadmin_password }}"
+        users: "{{ users }}"
+        update_password: on_create
+
+    - name: join users to groups
+      ipagroup:
+        ipaadmin_principal: admin
+        ipaadmin_password: "{{ ipaadmin_password }}"
+        action: member
+        name: "{{ student[1] }}"
+        user: "{{ student[0]['name'] }}"
+      loop: "{{ new_students | subelements('groups')}}"
+      loop_control:
+        loop_var: student
+
+    - name: create hbacrules for student workstation
+      ipahbacrule:
+        ipaadmin_principal: admin
+        ipaadmin_password: "{{ ipaadmin_password }}"
+        name: allow {{ student['name'] }} access on {{ student['workstation'] }}
+        user: "{{ student['name'] }}"
+        host: "{{ student['workstation'] }}"
+        hbacsvcgroup: student services
+      loop: "{{ new_students }}"
+      loop_control:
+        loop_var: student

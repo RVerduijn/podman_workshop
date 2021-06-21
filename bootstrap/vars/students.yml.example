@@ -1,0 +1,18 @@
+---
+# save this file as students.yml
+students:
+- name: userone
+  first: User
+  last: One
+  email: userone@example.com
+  workstation: workstation01.example.com
+  groups: ['students','admins']  # list of ipa groups the user should be joined to
+  password: secret
+  sshpubkey: ssh-rsa ....
+  sshkey: base64 encoded privkey
+- name: usertwo
+  first: User
+  last: Two
+  email: usertwo@example.com
+  workstation: workstation02.example.com
+  # groups, password, sshpubkey and sshkey are optional and will be generated if missing

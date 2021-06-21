@@ -28,27 +28,12 @@
       reboot:
       when: reboot_required['rc'] == 1
 
-    - block:
-        - name: read ssh private key
-          slurp:
-            src: ~/.ssh/id_rsa_qstars_aws
-          register: ssh_key
-          delegate_to: localhost
-
-        - name: write ssh key to stepstone
-          copy:
-            dest: ~/.ssh/id_rsa
-            mode: 0400
-            owner: stepstone
-            group: stepstone
-            content: "{{ ssh_key['content'] | b64decode }}"
-
-        - name: extract pubkey
-          openssl_publickey:
-            path: ~/.ssh/id_rsa.pub
-            privatekey_path: ~/.ssh/id_rsa
-            format: OpenSSH
-            mode: 0644
-            owner: stepstone
-            group: stepstone
-      become: false
+    - name: remove keys
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /home/stepstone/.ssh/id_rsa
+        - /home/stepstone/.ssh/id_rsa.pub
+        - /root/.ssh/id_rsa
+        - /root/.ssh/id_rsa.pub

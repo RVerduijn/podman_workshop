@@ -1,0 +1,13 @@
+---
+students:
+{% for student in new_students %}
+  - name: {{ student['name'] }}
+    first: {{ student['first'] }}
+    last: {{ student['last'] }}
+    email: {{ student['email'] }}
+    workstation: {{ student['workstation'] }}
+    groups: {{ student['groups'] }}
+    password: {{ student['password'] }}
+    sshpubkey: {{ student['sshpubkey'] }}
+    sshkey: {{ student['sshkey'] }}
+{% endfor %}

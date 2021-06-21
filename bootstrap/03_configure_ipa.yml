@@ -40,6 +40,7 @@
         runasgroupcategory: all
         cmdcategory: all
         group: admins
+        sudooption: '!authenticate'
 
     - name: create student group
       ipagroup:

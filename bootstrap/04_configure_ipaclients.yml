@@ -1,0 +1,125 @@
+---
+- name: add workstations to the inventory
+  hosts: localhost
+  gather_facts: false
+  become: false
+  vars:
+    workstations: 2
+
+  tasks:
+    - name: add workstations to inventory
+      add_host:
+        hostname: workstation{{ item }}.qstars.lab
+        ansible_host: 10.10.1.{{ item }}
+        ansible_user: student
+        groups:
+          - all
+          - ipaclients
+          - workstations
+        network_connections:
+          - name: eth0
+            state: up
+            type: ethernet
+            interface_name: eth0
+            ip:
+              address:
+                - 10.10.1.{{ item }}/24
+              dns:
+                - 10.10.1.10
+              dns_search:
+                - qstars.lab
+              gateway4: 10.10.1.1
+          - name: ens3
+            state: absent
+          - name: System eth0
+            state: absent
+      with_sequence: start=11 end={{ 10 + workstations }}
+
+- name: configure ipaclients
+  hosts: ipaclients
+  gather_facts: true
+  become: true
+
+  tasks:
+    - name: check if /usr/bin/python exists
+      stat:
+        path: /usr/bin/python
+      register: python_compat
+
+    - name: set python interpreter
+      set_fact:
+        ansible_python_interpreter: /usr/bin/python3
+      when: python_compat['stat']['exists'] | bool
+
+    - name: remove unwanted packages
+      package:
+        name:
+          - cloud-init
+          - python-unversioned-command
+        state: absent
+
+    - name: reset ssh connection
+      meta: reset_connection
+
+    - name: clean up cloud_init
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /var/log/cloud-init*
+        - /var/lib/cloud
+        - /etc/cloud
+        - /home/cloud-user
+
+    - name: set hostname
+      command: hostnamectl set-hostname {{ inventory_hostname }}
+      when: true
+
+    - name: gather facts
+      setup:
+
+    - name: timesync
+      include_role:
+        name: fedora.linux_system_roles.timesync
+
+    - name: include network
+      include_role:
+        name: fedora.linux_system_roles.network
+
+    - block:
+        - name: add client_packages to default packages
+          set_fact:
+            default_packages: "{{ default_packages + client_packages }}"
+
+        - name: add epel
+          package:
+            name: epel-release
+          when: ansible_distribution == "CentOS"
+
+      when: inventory_hostname in groups['workstations']
+
+    - name: install packages
+      package:
+        name: "{{ default_packages }}"
+        state: present
+
+    - name: update server
+      package:
+        name: "*"
+        state: latest
+      tags:
+        - skip_ansible_lint
+
+    - name: check for reboot
+      command: needs-restarting -r
+      register: reboot_required
+      changed_when: false
+      failed_when: reboot_required['rc'] > 1
+
+    - name: reboot
+      reboot:
+      when: reboot_required['rc'] == 1
+
+    - name: setip ipaclient
+      include_role:
+        name: ipaclient

@@ -1,0 +1,5 @@
+---
+# save this file as mail.yml and crypt the passwords with ansible-vault
+email: myemail@example.com
+email_password: secret
+smtp: smtp.example.com
