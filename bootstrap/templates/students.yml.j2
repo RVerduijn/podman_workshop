@@ -1,5 +1,6 @@
 ---
 students:
+
 {% for student in new_students %}
   - name: {{ student['name'] }}
     first: {{ student['first'] }}
@@ -10,4 +11,5 @@ students:
     password: {{ student['password'] }}
     sshpubkey: {{ student['sshpubkey'] }}
     sshkey: {{ student['sshkey'] }}
+
 {% endfor %}

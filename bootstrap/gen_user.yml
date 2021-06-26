@@ -1,16 +1,14 @@
 ---
-- name: current student
-  debug:
-    var: student
-
 - name: set temp new_student
   set_fact:
     new_student: "{{ student }}"
 
 - block:
     - name: generate ssh key pair
-      openssh_keypair:
+      community.crypto.openssh_keypair:
         path: /tmp/id_rsa_podman_workshop_{{ new_student['name'] }}
+        force: yes
+        regenerate: always
       register: ssh_pub_key
 
     - name: read priv_key
@@ -18,10 +16,15 @@
         path: /tmp/id_rsa_podman_workshop_{{ new_student['name'] }}
       register: ssh_key
 
-    - name: remove key file
+    - name: remove key files
       file:
-        path: /tmp/id_rsa_podman_workshop_{{ new_student['name'] }}
+        path: "{{ file }}"
         state: absent
+      loop:
+        - /tmp/id_rsa_podman_workshop_{{ new_student['name'] }}
+        - /tmp/id_rsa_podman_workshop_{{ new_student['name'] }}.pub
+      loop_control:
+        loop_var: file
 
     - name: set student sshkey
       set_fact:

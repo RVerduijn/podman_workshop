@@ -34,7 +34,7 @@
         ipaadmin_principal: admin
         ipaadmin_password: "{{ ipaadmin_password }}"
         name: allow_sudo_all
-        description: allow members of admins sudo all
+        description: allow members of admins sudo all without password
         hostcategory: all
         runasusercategory: all
         runasgroupcategory: all
@@ -42,20 +42,47 @@
         group: admins
         sudooption: '!authenticate'
 
+    - name: create admin hbacrule
+      ipahbacrule:
+        ipaadmin_principal: admin
+        ipaadmin_password: "{{ ipaadmin_password }}"
+        name: admin access all
+        description: Allow admins to access any host from any host
+        group:
+          - admins
+        hostcategory: all
+        servicecategory: all
+
+    - name: disable allow_all
+      ipahbacrule:
+        ipaadmin_principal: admin
+        ipaadmin_password: "{{ ipaadmin_password }}"
+        name: allow_all
+        state: disabled
+
     - name: create student group
       ipagroup:
         ipaadmin_principal: admin
         ipaadmin_password: "{{ ipaadmin_password }}"
         name: students
 
-    - name: create ipa hostgroups
+    - name: create ipa hostgroup for stepstone
       ipahostgroup:
         ipaadmin_principal: admin
         ipaadmin_password: "{{ ipaadmin_password }}"
-        name: "{{ item }}"
-      loop:
-        - workstations
-        - stepstone
+        name: stepstone
+        description: stepstone hostgroup
+
+    - name: create stepstone automember hostgroup rule
+      ipaautomember:
+        ipaadmin_principal: admin
+        ipaadmin_password: "{{ ipaadmin_password }}"
+        name: stepstone
+        description: stepstone hostgroup automember rule
+        automember_type: hostgroup
+        inclusive:
+          - key: fqdn
+            expression: "stepstone.qstars.lab"
 
     - name: create stepstone hbacrule
       ipahbacrule:
@@ -68,44 +95,29 @@
         hostgroup:
           - stepstone
 
+    # to enable the creation of hbacrules for specific accounts on each workstation
+    # create a hostgroup for each workstation and automember rule
+    # then set hbacrules on the hostgroups so they get applied as soon as the
+    # ipaclient joins the domain
+    - name: create a hostgroup for each workstation
+      ipahostgroup:
+        ipaadmin_principal: admin
+        ipaadmin_password: "{{ ipaadmin_password }}"
+        name: "{{ 'workstation%02d' | format(item) }}"
+        description: "{{ 'workstation%02d hostgroup' | format(item) }}"
+      loop: "{{ range(11,30) | list }}"
+
     - name: create workstations automember hostgroup rule
       ipaautomember:
         ipaadmin_principal: admin
         ipaadmin_password: "{{ ipaadmin_password }}"
-        name: workstations
-        description: workstations
+        name: "{{ 'workstation%02d' | format(item) }}"
+        description: "{{ 'workstation%02d  automember rule' | format(item) }}"
         automember_type: hostgroup
         inclusive:
           - key: fqdn
-            expression: "workstation.*.qstars.lab"
-
-    - name: create stepstone automember hostgroup rule
-      ipaautomember:
-        ipaadmin_principal: admin
-        ipaadmin_password: "{{ ipaadmin_password }}"
-        name: stepstone
-        description: stepstone
-        automember_type: hostgroup
-        inclusive:
-          - key: fqdn
-            expression: "stepstone.qstars.lab"
-
-    - name: create admin hbacrule
-      ipahbacrule:
-        ipaadmin_principal: admin
-        ipaadmin_password: "{{ ipaadmin_password }}"
-        name: admin access all
-        group:
-          - admins
-        hostcategory: all
-        servicecategory: all
-
-    - name: disable allow_all
-      ipahbacrule:
-        ipaadmin_principal: admin
-        ipaadmin_password: "{{ ipaadmin_password }}"
-        name: allow_all
-        state: disabled
+            expression: "{{ 'workstation%02d.qstars.lab' | format(item) }}"
+      loop: "{{ range(11,30) | list }}"
 
     - name: create student hbacservice group
       ipahbacsvcgroup:

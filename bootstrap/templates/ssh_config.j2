@@ -1,6 +1,69 @@
 #
 # plaats dit bestand in je .ssh directory
+# ( of voeg de inhoud toe aan /home/{{ new_student['name'] }}/.ssh/config )
 # /home/{{ new_student['name'] }}/.ssh/config
+#
+# apple
+# voor apple gebruikers is het home path:
+# /Users/{{ new_student['name'] }}/.ssh/config
+#
+# windows met WSL
+# voor windows gebruikers met WSL versie 1 en versie 2
+# De default .ssh directory op windows is C:/Users/{{ new_student['name'] }}/.ssh
+#
+#  - als je al een WSL Linux /home/{{ new_student['name'] }}/.ssh directory hebt
+#    en een windows C:/Users/{{ new_student['name'] }}/.ssh directory
+#     - voeg de linux bestanden dan toe aan de windows .ssh bestanden/directories
+#       denk eraan dat je de bestanden authorized_keys, config en known hosts moet samenvoegen ipv overschrijven
+#       in WSL linux kun je de windows user home drive vinden op /mnt/c/Users/{{ new_student['name'] }}
+#
+#     - symlink de WSL Linux /home/{{ new_student['name'] }}/.ssh naar /mnt/c/Users/{{ new_student['name'] }}/.ssh
+#         ln -s /mnt/c/Users/{{ new_student['name'] }}/.ssh /home/{{ new_student['name'] }}/.ssh
+#
+#     - zet de rechten goed ( wsl linux vindt de windows filesystem privs niet ok, windows negeerd de wsl filesystem privs )
+#         find /home/{{ new_student['name'] }}/.ssh -exec chmod -u+rwX,g-rwc,o-rwx {} \;
+#
+#  - als je alleen een WSL Linux /home/{{ new_student['name'] }}/.ssh directory hebt
+#     - verplaatst je WSL Linux /home/{{ new_student['name'] }}/.ssh naar windows /mnt/c/Users/{{ new_student['name'] }}/.ssh
+#         mv /home/{{ new_student['name'] }}/.ssh /mnt/c/Users/{{ new_student['name'] }}/.ssh
+#
+#     - symlink de linux /home/{{ new_student['name'] }}/.ssh naar C:/Users/{{ new_student['name'] }}/.ssh
+#         ln -s /mnt/c/Users/{{ new_student['name'] }}/.ssh /home/{{ new_student['name'] }}/.ssh
+#
+#     - zet de rechten goed
+#         find /home/{{ new_student['name'] }}/.ssh -exec chmod -u+rwX,g-rwc,o-rwx {} \;
+#
+#  - als je alleen een windows C:/Users/{{ new_student['name'] }}/.ssh directory hebt
+#     - symlink de linux /home/{{ new_student['name'] }}/.ssh naar C:/Users/{{ new_student['name'] }}/.ssh
+#         ln -s /mnt/c/Users/{{ new_student['name'] }}/.ssh /home/{{ new_student['name'] }}/.ssh
+#
+#     - zet de rechten goed
+#         find /home/{{ new_student['name'] }}/.ssh -exec chmod -u+rwX,g-rwc,o-rwx {} \;
+#
+#  - als je geen .ssh hebt in WSL Linux en windows home (onwaarschijnlijk)
+#     - in WSL Linux maak de /mnt/c/Users/{{ new_student['name'] }}/.ssh directory
+#         mkdir -p /mnt/c/Users/{{ new_student['name'] }}/.ssh
+#
+#     - symlink de linux /home/{{ new_student['name'] }}/.ssh naar C:/Users/{{ new_student['name'] }}/.ssh
+#         ln -s /mnt/c/Users/{{ new_student['name'] }}/.ssh /home/{{ new_student['name'] }}/.ssh
+#
+#     - zet de rechten goed
+#         find /home/{{ new_student['name'] }}/.ssh -exec chmod -u+rwX,g-rwc,o-rwx {} \;
+# 
+# voor putty/mobaxterm/securecrt/andere_ssh_client_programma's
+#   met de komst van ondersteuning voor openssl in microsoft windows zijn deze programma's overbodig geworden
+#   om gewoon ssh commandos te geven vanuit powershell/cmd zie de volgende links
+#     https://docs.microsoft.com/en-us/windows-server/administration/openssh/openssh_overview
+#     https://docs.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse
+#
+#   omdat 'powershell' en vooral 'cmd' toch nog beperkt zijn heeft Microsoft WSL toegevoegd aan windows
+#   met WSL draai je gewoon een linux variant native op je windows desktop
+#   zie de volgende link voor installatie instructies: 
+#     https://docs.microsoft.com/en-us/windows/wsl/install-win10
+#   en er is ook een gratis fedora wsl te vinden:
+#     https://github.com/WhitewaterFoundry/Fedora-Remix-for-WSL
+#
+#
 #
 # zorg ervoor dat de directory en de bestanden de volgende rechten hebben
 # ls -al /home/{{ new_student['name'] }}/.ssh
@@ -8,7 +71,11 @@
 # drwx------. 1 {{ new_student['name'] }} {{ new_student['name'] }}  7112 Jun 21 13:08 ..
 # -rw-------. 1 {{ new_student['name'] }} {{ new_student['name'] }}  2352 Jun 20 19:12 config
 # -rw-------. 1 {{ new_student['name'] }} {{ new_student['name'] }}  3357 Jun 21 11:57 id_rsa_qstars_aws_{{ new_student['name'] }}
-# -rw-r--r--. 1 {{ new_student['name'] }} {{ new_student['name'] }}   724 Jun 21 11:57 id_rsa_qstars_aws_{{ new_student['name'] }}.pub
+# -rw-------. 1 {{ new_student['name'] }} {{ new_student['name'] }}   724 Jun 21 11:57 id_rsa_qstars_aws_{{ new_student['name'] }}.pub
+#
+# - om eenvoudig de rechten goed te zetten voer het volgende commando uit:
+#   (de hoofdletter X is geen typo, maar een slecht gedocumenteerde feature van bash)
+#     find /home/{{ new_student['name'] }}/.ssh -exec chmod -u+rwX,g-rwc,o-rwx {} \;
 #
 # hierna kun je inloggen op je workstation vanaf je linux systeem met het commando
 # ssh {{ new_student['workstation'].split('.')[0] }}
@@ -28,31 +95,3 @@ Host {{ new_student['workstation'].split('.')[0] }} {{ new_student['workstation'
   IdentityFile /home/{{ new_student['name'] }}/.ssh/id_rsa_qstars_aws_{{ new_student['name'] }}
   StrictHostKeyChecking no
   UserKnownHostsFile /dev/null
-
-{#
-{{ lookup('pipe','date +%Y-%m-%d-%H-%M-%S') }}
-{{ lookup('pipe','date +%b %m %H:%M') }}
-
-  ok: [localhost] => {
-    "ansible_date_time": {
-        "date": "2017-09-30",
-        "day": "30",
-        "epoch": "1506803206",
-        "hour": "13",
-        "iso8601": "2017-09-30T20:26:46Z",
-        "iso8601_basic": "20170930T132646356294",
-        "iso8601_basic_short": "20170930T132646",
-        "iso8601_micro": "2017-09-30T20:26:46.356428Z",
-        "minute": "26",
-        "month": "09",
-        "second": "46",
-        "time": "13:26:46",
-        "tz": "PDT",
-        "tz_offset": "-0700",
-        "weekday": "Saturday",
-        "weekday_number": "6",
-        "weeknumber": "39",
-        "year": "2017"
-    }
-}
-#}

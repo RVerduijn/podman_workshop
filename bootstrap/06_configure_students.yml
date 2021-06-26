@@ -48,9 +48,10 @@
       ipahbacrule:
         ipaadmin_principal: admin
         ipaadmin_password: "{{ ipaadmin_password }}"
-        name: allow {{ student['name'] }} access on {{ student['workstation'] }}
+        name: "{{ student['name'] }}"
+        description: allow {{ student['name'] }} ssh access on {{ student['workstation'] }}
         user: "{{ student['name'] }}"
-        host: "{{ student['workstation'] }}"
+        hostgroup: "{{ student['workstation'].split('.')[0] }}"
         hbacsvcgroup: student services
       loop: "{{ new_students }}"
       loop_control:

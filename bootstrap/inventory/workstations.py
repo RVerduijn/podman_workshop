@@ -8,7 +8,7 @@ try:
 except ImportError:
     import simplejson as json
 
-number_of_workstations = os.getenv('WORKSTATIONS', '2')
+number_of_workstations = os.getenv('WORKSTATIONS', '12')
 domain = os.getenv('DOMAIN', 'qstars.lab')
 
 class ExampleInventory(object):
