@@ -1,0 +1,7 @@
+---
+podman_packages:
+  - cockpit
+  - cockpit-podman
+  - podman
+  - podman-compose
+  - skopeo
