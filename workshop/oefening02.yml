@@ -1,0 +1,34 @@
+---
+- name: rootless met niet locale users
+  hosts: workstations
+  become: true
+  remote_user: admin
+  vars_files:
+    - ../bootstrap/vars/students.yml
+
+  tasks:
+    - name: set student name
+      set_fact:
+        name: "{{ (students | json_query(my_query))[0] }}"
+      vars:
+        my_query: "[?workstation=='{{ inventory_hostname }}'].name"
+
+    - name: ensure subuid and subgid is set
+      copy:
+        dest: "{{ item }}"
+        content: |
+          student:100000:65536
+          {{ name }}:200000:65536
+        mode: 0644
+        owner: root
+        group: root
+        setype: etc_t
+      loop:
+        - /etc/subuid
+        - /etc/subgid
+      notify:
+        - reboot
+
+  handlers:
+    - name: reboot
+      reboot:

@@ -1,0 +1,16 @@
+---
+- name: de basics installeren en configureren
+  hosts: workstations
+  become: true
+  remote_user: admin
+  vars_files:
+    - ../bootstrap/vars/students.yml
+
+  tasks:
+    - name: install podman_packages
+      package:
+        name:
+         - podman
+         - podman-docker
+        state: present
+

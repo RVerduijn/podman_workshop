@@ -1,0 +1,81 @@
+---
+- name: clean up
+  hosts: "{{ my_hosts }}"
+  become: true
+  remote_user: admin
+  vars_files:
+    - ../bootstrap/vars/students.yml
+
+  tasks:
+    - name: set student name
+      set_fact:
+        name: "{{ (students | json_query(my_query))[0] }}"
+      vars:
+        my_query: "[?workstation=='{{ inventory_hostname }}'].name"
+    
+    - name: clean all podman images
+      command: podman rmi $(podman images -q) -f
+      changed_when: false      
+  
+    - name: clean all user podman files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /home/{{ name }}/.local/share/containers
+        - /home/student/.local/share/containers
+        - /home/{{ name }}/.config/cni
+        - /home/student/.config/cni
+  
+    - name: disable services
+      systemd:
+        name: cockpit.socket
+        state: stopped
+        enabled: false
+      loop:
+        - cockpit.socket
+        - cockpit.service
+
+    - name: remove podman packages
+      package:
+        name: "{{ podman_packages }}"
+        state: absent
+
+    - name: ensure student .ssh dir exists
+      file:
+        path: /home/student/.ssh
+        mode: 0700
+        owner: student
+        group: student
+        setype: ssh_home_t
+        state: directory
+
+    - name: ensure student authorized_keys exists
+      copy:
+        dest: /home/student/.ssh/authorized_keys
+        owner: student
+        group: student
+        mode: 0600
+        content: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDCFwbdk8n3e4aIJ4rUUNmpt2urKdog56HfCxRkeKUm/33JYEGVgwbRyDRiYoBSRafI6hbyYGfewlQJ6riavBTeQFAUjS7aYXxh4ktPejJeetE3H34FEp7jvF6GLbvyAXHgka4AgX98+dw3GSXMngIW3BZ/DyIz/Hy0jAJ7ld9FX2YLGcRVrGQWagqhXCV4Ldd1w5c8ds0i8Y5bKMThBCJWwVLqfYM8vW0Uxiw26pX4kDnbt+rNC3E0mwf/HsdAuqSp73cX8PZhNuoZGtuezLzFukJJOG4fQpyeq5PTAimued3G+G8WYle50ZdBHLtxqHH9zSRdvkW1BwyF1BR+HQ1D'
+        setype: ssh_home_t
+        state: present  
+
+    - name: clean subuid and subgid
+      copy:
+        dest: "{{ item }}"
+        content: |
+          student:100000:65536
+        mode: 0644
+        owner: root
+        group: root
+        setype: etc_t
+      loop:
+        - /etc/subuid
+        - /etc/subgid
+      notify:
+        - reboot
+
+  handlers:
+    - name: reboot
+      reboot:
+      

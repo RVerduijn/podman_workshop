@@ -95,3 +95,4 @@ Host {{ new_student['workstation'].split('.')[0] }} {{ new_student['workstation'
   IdentityFile /home/{{ new_student['name'] }}/.ssh/id_rsa_qstars_aws_{{ new_student['name'] }}
   StrictHostKeyChecking no
   UserKnownHostsFile /dev/null
+  LocalForward 9090 127.0.0.1:9090 

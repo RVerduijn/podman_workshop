@@ -1,0 +1,24 @@
+---
+- name: include oefening02
+  import_playbook: oefening02.yml
+
+- name: cockpit installatie
+  hosts: workstations
+  become: true
+  remote_user: admin
+  vars_files:
+    - ../bootstrap/vars/students.yml
+
+  tasks:
+    - name: install cockpit packages
+      package:
+        name: "{{ item }}"
+      loop:
+        - cockpit
+        - cockpit-podman
+
+    - name: enable socket
+      systemd:
+        name: cockpit.socket
+        state: started
+        enabled: true

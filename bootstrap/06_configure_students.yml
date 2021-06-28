@@ -56,3 +56,19 @@
       loop: "{{ new_students }}"
       loop_control:
         loop_var: student
+
+    - name: create student sudorule
+      ipasudorule:
+        ipaadmin_principal: admin
+        ipaadmin_password: "{{ ipaadmin_password }}"
+        name: "{{ student['name'] }}"
+        description: allow {{ student['name'] }} sudo on {{ student['workstation'] }}
+        host: "{{ student['workstation'] }}"
+        runasusercategory: all
+        runasgroupcategory: all
+        cmdcategory: all
+        user: "{{ student['name'] }}"
+        sudooption: '!authenticate'
+      loop: "{{ new_students }}"
+      loop_control:
+        loop_var: student
