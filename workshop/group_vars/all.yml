@@ -3,5 +3,6 @@ podman_packages:
   - cockpit
   - cockpit-podman
   - podman
+  - podman-docker
   - podman-compose
   - skopeo

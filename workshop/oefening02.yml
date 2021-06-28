@@ -1,4 +1,7 @@
 ---
+- name: include oefening 01
+  include_play: oefening01.yml
+
 - name: rootless met niet locale users
   hosts: workstations
   become: true
